@@ -8,11 +8,17 @@
 		<input id="inputText" type="text" onChange="console.log()"/><br>
 		예측값: <text id="resultText"></text><br>
 		
-		
         <script src="LSTM/Util.js"></script>
 		<script src="LSTM/Layer_Output.js"></script>
         <script src="LSTM/Layer_Hidden.js"></script>
         <script src="LSTM/LSTM.js"></script>
+		
+		<!--
+		<script src="RNN/Layer_Output.js"></script>
+        <script src="RNN/Layer_Hidden.js"></script>
+        <script src="RNN/RNN.js"></script>
+		-->
+		
 		<script src="StockPredictor.js"></script>
 		
 		<script type="text/javascript">

@@ -1,7 +1,7 @@
 /*
 	RNN과 LSTM에 대한 이해: https://ratsgo.github.io/natural%20language%20processing/2017/03/09/rnnlstm/
 */
-let LSTM = function (layerNum, layerSize) {
+let RNN = function (layerNum, layerSize) {
 	this.inputNum = layerNum.input, this.hiddenNum = layerNum.hidden, this.outputNum = layerNum.output;
 	this.inputSize = layerSize.input, this.hiddenSize = layerSize.hidden, this.outputSize = layerSize.output;
 	
@@ -13,10 +13,9 @@ let LSTM = function (layerNum, layerSize) {
 		this.outputLayer[i] = new Layer_Output(this.hiddenSize, this.outputSize);
 	
 	this.BLANK_X = new Array(this.inputSize).fill(0); // 입력 레이어가 없는 은닉 레이어에서 사용
-	this.BLANK_DY = new Array(this.hiddenSize).fill(0); // 입력 레이어가 없는 은닉 레이어에서 사용
 	this.initStack();
 }
-LSTM.prototype = {
+RNN.prototype = {
 	predict: function (inputList) {
 		return this.forward(inputList);
 	},
@@ -34,28 +33,21 @@ LSTM.prototype = {
 	},
 	
 	initStack: function () {
-		this.h_stack = new Array(this.hiddenSize).fill(0);
-		this.c_stack = new Array(this.hiddenSize).fill(0);
+		this.hStack = new Array(this.hiddenSize).fill(0);
 	},
 	
 	forward: function (inputList) {
-		this.initStack();
-		let h_prev = this.h_stack;
-		let c_prev = this.c_stack;
+		let prevH = this.hStack.slice();
 		
 		// Hidden Layer
 		for (let i = 0; i < this.hiddenNum; i++) {
-			let x = (i < this.inputNum) ? inputList[i] : this.BLANK_X;
-			let res = this.hiddenLayer[i].forward(x, h_prev, c_prev);
-			// console.log('h: ' + res.h + ' c: ' + res.c);
+			if (i < this.inputNum)
+				prevH = this.hiddenLayer[i].forward(prevH, inputList[i]);
+			else
+				prevH = this.hiddenLayer[i].forward(prevH, this.BLANK_X);
 			
-			h_prev = res.h;
-			c_prev = res.c;
-			
-			if (i == 0) {
-				this.h_stack = h_prev;
-				this.c_stack = c_prev;
-			}
+			if (i == 0)
+				this.hStack = prevH.slice();
 		}
 		
 		// Output Layer
@@ -68,16 +60,17 @@ LSTM.prototype = {
 		return outputList;
 	},
 	backward: function (deltaList) {
-		let dh_next = new Array(this.hiddenSize).fill(0);
-		let dc_next = new Array(this.hiddenSize).fill(0);
+		let dh = new Array(this.hiddenSize).fill(0);
 		
 		// Hidden Layer 
 		for (let i = this.hiddenNum-1, j = this.outputNum-1; i >= 0; i--, j--) {
-			let dy = (j >= 0) ? this.outputLayer[j].backward(deltaList[j]) : this.BLANK_DY;
-			
-			let res = this.hiddenLayer[i].backward(dy, dh_next, dc_next);
-			dh_next = res.dh;
-			dc_next = res.dc;
+			// Output Layer
+			if (j >= 0) {
+				let dy = this.outputLayer[j].backward(deltaList[j]);
+				for (let k = 0; k < this.hiddenSize; k++)
+					dh[k] += dy[k];
+			}
+			dh = this.hiddenLayer[i].backward(dh);
 		}
 	}
 }
