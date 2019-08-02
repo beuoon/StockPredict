@@ -21,16 +21,22 @@ LSTM.prototype = {
 		return this.forward(inputList);
 	},
 	train: function (inputList, labelList) {
+		let error = 0;
 		let outputList = this.forward(inputList);
 		
 		let deltaList = [];
 		for (let i = 0; i < this.outputNum; i++) {
 			deltaList[i] = [];
-			for (let j = 0; j < this.outputSize; j++)
+			for (let j = 0; j < this.outputSize; j++) {
 				deltaList[i][j] = outputList[i][j] - labelList[i][j];
+				error += 0.5*Math.pow(deltaList[i][j], 2);
+			}
 		}
+		error /= this.outputNum * this.outputSize;
 		
 		this.backward(deltaList);
+		
+		return error;
 	},
 	
 	initStack: function () {
@@ -39,7 +45,6 @@ LSTM.prototype = {
 	},
 	
 	forward: function (inputList) {
-		this.initStack();
 		let h_prev = this.h_stack;
 		let c_prev = this.c_stack;
 		

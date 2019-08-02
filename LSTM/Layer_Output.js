@@ -2,6 +2,7 @@ let Layer_Output = function (hSize, ySize, softmax = false) {
     this.ETA = 0.005;
     this.hSize = hSize, this.ySize = ySize; // 입력 크기, 출력 크기
     this.weight = new Array(this.ySize);
+	this.weightMoment = new Array(this.ySize);
     this.h;
 	
 	this.softmax = softmax;
@@ -11,6 +12,8 @@ let Layer_Output = function (hSize, ySize, softmax = false) {
         this.weight[i] = [];
         for (let j = 0; j <= this.hSize; j++)
             this.weight[i][j] = (Math.random() * 2 - 1) * weightLimit;
+		
+		this.weightMoment[i] = new Array(this.hSize+1).fill(0);
     }
 }
 
@@ -40,9 +43,14 @@ Layer_Output.prototype = {
         }
         
 		for (let i = 0; i < this.ySize; i++) {
-			for (let j = 0; j < this.hSize; j++)
-				this.weight[i][j] += -this.ETA * (delta[i] * this.h[j]);
-			this.weight[i][this.hSize] += -this.ETA * delta[i];
+			for (let j = 0; j < this.hSize; j++) {
+				this.weightMoment[i][j] = 0.9*this.weightMoment[i][j] + 0.1*(delta[i] * this.h[j]);
+				this.weight[i][j] += -this.ETA * this.weightMoment[i][j];
+			}
+			
+			// bias
+			this.weightMoment[i][this.hSize] = 0.9*this.weightMoment[i][this.hSize] + 0.1*delta[i];
+			this.weight[i][this.hSize] += -this.ETA * this.weightMoment[i][this.hSize];
 		}
 		
         return dh;
