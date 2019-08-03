@@ -1,5 +1,5 @@
 let Layer_Output = function (hSize, ySize, softmax = false) {
-    this.ETA = 0.005;
+    this.ETA = 0.01;
     this.hSize = hSize, this.ySize = ySize; // 입력 크기, 출력 크기
     this.weight = new Array(this.ySize);
 	this.weightMoment = new Array(this.ySize);

@@ -5,7 +5,7 @@ var StockPredictor = function () {
 	
 	this.dataList = [];
 	this.INPUT_DATA_SIZE = 6;
-	this.OUTPUT_DATA_SIZE = 1;
+	this.OUTPUT_DATA_SIZE = 6;
 	
 	this.data = null;
 	
@@ -1287,7 +1287,16 @@ StockPredictor.prototype = {
 				this.dataList[i][j] = Number(this.dataList[i][j]);
 		}
 		
-		// 최솟값, 최댓값 구하기
+		// 목표값 생성
+		this.labelList = this.dataList.slice();
+		// this.labelList = [];
+		// for (let i = 0; i < this.dataList.length; i++) {
+		// 	// let data = this.dataList[i-1][3] - this.dataList[i][3]; // 오늘 종가와 어제 종가의 차이
+		// 	let data = this.dataList[i][3];
+		// 	this.labelList.push([data]);
+		// }
+		
+		// 입력값 정규화
 		let min = new Array(this.INPUT_DATA_SIZE);
 		let max = new Array(this.INPUT_DATA_SIZE);
 		
@@ -1306,30 +1315,48 @@ StockPredictor.prototype = {
 			}
 		}
 		
-		this.dataMin = min;
-		this.dataMax = max;
-		
-		// 정규화
+		this.dataMin = min.slice();
+		this.dataMax = max.slice();
 		this.dataList = this.dataEncode(this.dataList);
 		
-		// 라벨 분리
-		this.labelList = [];
-		for (let i = 0; i < this.dataList.length; i++)
-			this.labelList[i] = [this.dataList[i][3]];
-		this.labelMin = [min[3]];
-		this.labelMax = [max[3]];
+		// 목표값 정규화
+		min = new Array(this.OUTPUT_DATA_SIZE);
+		max = new Array(this.OUTPUT_DATA_SIZE);
+		
+		for (let k = 0; k < this.OUTPUT_DATA_SIZE; k++) {
+			min[k] = this.labelList[0][k];
+			max[k] = this.labelList[0][k];
+		}
+			
+		for (let j = 1; j < this.labelList.length; j++) {
+			for (let k = 0; k < this.OUTPUT_DATA_SIZE; k++) {
+				if (min[k] > this.labelList[j][k])
+					min[k] = this.labelList[j][k];
+				
+				else if (max[k] < this.labelList[j][k])
+					max[k] = this.labelList[j][k];
+			}
+		}
+		
+		this.labelMin = min.slice();
+		this.labelMax = max.slice();
+		
+		this.labelList = this.labelEncode(this.labelList);
 		
 		console.log("Data Preprocess End!!");
 		
-		this.layerNum = {input: 28, hidden: 57, output: 30};
-		this.layerSize = {input: this.INPUT_DATA_SIZE, hidden: 20, output: this.OUTPUT_DATA_SIZE};
+		// 네트워크 생성
+		this.layerNum = {input: 50, hidden: 50, output: 1};
+		this.layerSize = {input: this.INPUT_DATA_SIZE, hidden: 6, output: this.OUTPUT_DATA_SIZE};
 		this.network = new LSTM(this.layerNum, this.layerSize);
 		
 		// 테스트 케이스 분리
-		this.testLabelList = this.labelList.slice(-this.layerNum.output);
+		let testDataNum = Math.round(this.dataList.length / 10);
+		this.testDataList = this.dataList.slice(-testDataNum);
+		this.testLabelList = this.labelList.slice(-testDataNum);
 		
-		this.dataList = this.dataList.slice(0, -this.layerNum.output);
-		this.labelList = this.labelList.slice(0, -this.layerNum.output);
+		this.dataList = this.dataList.slice(0, -testDataNum);
+		this.labelList = this.labelList.slice(0, -testDataNum);
 	},
 	
 	predict: function (data) {
@@ -1342,7 +1369,6 @@ StockPredictor.prototype = {
 		
 		for (let i = 0; i < this.layerNum.input; i++)
 			input.push(inputList.shift());
-		
 		
 		// 입력되는 값
 		this.network.initStack();
@@ -1370,7 +1396,7 @@ StockPredictor.prototype = {
 			
 			error += this.network.train(input, label);
 		}
-		error /= temp;
+		// error /= temp;
 		this.error = error;
 			
 		console.log('epoch: ' + ++this.epoch + ' [error: ' + error + ']');
@@ -1383,24 +1409,36 @@ StockPredictor.prototype = {
 		let input, output, label;
 		
 		//＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊//
+		// output = this.labelList.slice(0, this.layerNum.input);
+		// for (let i = 0; i < this.dataList.length-this.layerNum.input; i+=3) {
+		// 	input = this.dataList.slice(i, i+this.layerNum.input);
+		// 	output = output.concat(this.predict(input));
+		// }
+		// label = this.labelList;
 		
-		input = this.dataList;
-		output = this.predict(input);
+		input = this.testDataList.slice(0, this.layerNum.input);
+		output = this.testLabelList.slice(0, this.layerNum.input);
+		for (let i = 0; i < this.testDataList.length-this.layerNum.input; i++) {
+			let temp = this.predict(input);
+			
+			input = input.concat(temp);
+			output = output.concat(temp);
+		}
 		label = this.testLabelList;
 		
-		// console.log('' + this.labelDecode(output));
-		// console.log('' + this.labelDecode(label));
+		// console.log('' + output);
+		// console.log('' + label);
 		
 		//＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊//
 		let canvas = document.getElementById('graphCanvas');
 		let context = canvas.getContext('2d');
 		canvas.width = 500; canvas.height = 500;
-		let xInterval = canvas.width / output.length;
+		let xInterval = canvas.width / label.length;
 		
 		let graphOutput = [], graphLabel = [];
-		for (let i = 0; i < output.length; i++) {
-			graphOutput[i] = 450 - output[i][0] * 400;
-			graphLabel[i] = 450 - label[i][0] * 400;
+		for (let i = 0; i < label.length; i++) {
+			graphOutput[i] = 250 - output[i][3] * 200;
+			graphLabel[i] = 250 - label[i][3] * 200;
 		}
 		
 		context.save();
@@ -1444,6 +1482,17 @@ StockPredictor.prototype = {
 			arr[i] = [];
 			for (let k = 0; k < this.INPUT_DATA_SIZE; k++)
 				arr[i][k] = (values[i][k]-this.dataMin[k])/(this.dataMax[k]-this.dataMin[k]);
+		}
+		
+		return arr;
+	},
+	labelEncode: function (values) {
+		let arr = [];
+		
+		for (let i = 0; i < values.length; i++) {
+			arr[i] = [];
+			for (let k = 0; k < this.OUTPUT_DATA_SIZE; k++)
+				arr[i][k] = (values[i][k]-this.labelMin[k])/(this.labelMax[k]-this.labelMin[k]);
 		}
 		
 		return arr;

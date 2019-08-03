@@ -32,7 +32,7 @@ LSTM.prototype = {
 				error += 0.5*Math.pow(deltaList[i][j], 2);
 			}
 		}
-		error /= this.outputNum * this.outputSize;
+		// error /= this.outputNum * this.outputSize;
 		
 		this.backward(deltaList);
 		
@@ -45,6 +45,7 @@ LSTM.prototype = {
 	},
 	
 	forward: function (inputList) {
+		// this.initStack();
 		let h_prev = this.h_stack;
 		let c_prev = this.c_stack;
 		

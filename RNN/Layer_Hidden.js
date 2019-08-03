@@ -1,5 +1,5 @@
 let Layer_Hidden = function (xSize, hSize) {
-    this.ETA = 0.005;
+    this.ETA = 0.01;
 	
 	this.hSize = hSize, this.xSize = xSize;
     this.weight_hh = [], this.weight_xh = [];
